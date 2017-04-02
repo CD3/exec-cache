@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+cachedir=$(readlink -f "${EXECCACHEDIR:-exec-cache.d}")
+bindir=$(readlink -f "${cachedir}/bin")
+
+for arg in "${@}"
+do
+
+# in order to overwrite an existing wrapper, we need to remove the
+# cached bin directory from PATH, if it is there,
+# so the which command doesn't just pick up the one we are trying to overwrite.
+NEWPATH=""
+for P in $(echo $PATH | sed "s/:/ /g")
+do
+  if [[ $P != ${bindir} ]]
+  then
+    NEWPATH="$NEWPATH:$P"
+  fi
+done
+export PATH="$NEWPATH"
+
+executable=$(which $arg)
+mock=${cachedir}/bin/$(basename $executable)
+cat << EOF > ${mock}
+#!/usr/bin/env bash
+$bindir/exec-cache-run $executable "\$@"
+EOF
+chmod +x ${mock}
+
+done
+
+echo "Please update your shell's PATH hash table by running"
+echo
+echo "    $ hash -r"
+echo

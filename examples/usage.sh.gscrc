@@ -1,0 +1,4 @@
+setup-command = rm -r testing
+setup-command = export PATH=$PWD/..:$PATH
+setup-command = export PS1="$ "
+

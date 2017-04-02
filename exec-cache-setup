@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+thisdir=${0%/*}
+cachedir="${EXECCACHEDIR:-./exec-cache.d}"
+cachedir=$(readlink -f ${cachedir})
+bindir="${cachedir}/bin"
+
+mkdir -p $bindir
+cp $thisdir/exec-cache-run  $cachedir/bin
+cp $thisdir/exec-cache-wrap $cachedir/bin
+
+cat << EOF > ${cachedir}/exec-cache-setup-env
+export EXECCACHEDIR=$cachedir
+export PATH="${bindir}:\$PATH"
+EOF
+
+echo "To complete setup, add ${cachedir}/bin to your PATH."
+echo
+echo "You can either do:"
+echo
+echo "    $ export PATH=${bindir}:\${PATH}"
+echo
+echo "or just source the 'exec-cache-setup-env' file in ${cachedir}:"
+echo
+echo "    $ source ${cachedir}/exec-cache-setup-env"
+

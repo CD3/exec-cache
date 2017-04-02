@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+
+# This script will run executables and cache the results (stdout, stderr, exit code, and
+# any files that where created). If the same executable (with the same arguments) is ran
+# again, the cached results are returned.
+#
+# It is a modified version of the script written by Patrick Brisbin in a blog post
+# (https://pbrisbin.com/posts/mocking_bash/) about mocking bash commands.
+# 
+# This version of the script adds support for caching files that are created by a command.
+
+executable="$1"; shift                              # executable to cache
+name="${executable##*/}"                            # name of the executable
+arghash=$(echo $* | md5sum | cut -d ' ' -f 1)       # a hash of the arguments to be passed to the executable
+cachedir="${EXECCACHEDIR:-./exec-cache.d}"          # the directory to store hash
+cachedir=$(readlink -f ${cachedir})                 # get the absolute path name to the cache dir
+instance="${cachedir}/instances/${name}/${arghash}" # the path that this instance will be cached in
+
+
+[ -d "${cachedir}" ] || mkdir "${cachedir}"
+
+
+# check if instance directory already exists (has the program been run with the args before)
+if [[ ! -d "$instance" ]]; then
+  # make the directory where cache will be stored
+  mkdir -p "$instance"
+  mkdir -p "$instance/files"
+  mkdir -p "$instance/tmp"
+  # get list of files in the current directory
+  find ./ -mindepth 1 -maxdepth 1 > "${instance}/tmp/files-pre"
+  # run the executable
+  $executable "$@" >"$instance/stdout" 2>"$instance/stderr"
+  # get a new list of files in the current directory
+  find ./ -mindepth 1 -maxdepth 1 > "${instance}/tmp/files-post"
+  # compare new files with old files and get a diff
+  cat ${instance}/tmp/files-{pre,post} | sort | uniq -u > "${instance}/tmp/files-new"
+
+  [ -n "$(cat ${instance}/tmp/files-new)" ] && cp -r $(cat ${instance}/tmp/files-new) "${instance}/files"
+  rm -r "${instance}/tmp"
+
+  echo $? > "$instance/exit_code"
+fi
+
+cat   "$instance/stdout"
+cat   "$instance/stderr" >&2
+[ -n "$(ls -A $instance/files)" ] && cp -r "$instance/files/"* ./
+
+read -r exit_code < "$instance/exit_code"
+
+exit $exit_code
