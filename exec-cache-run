@@ -30,6 +30,7 @@ if [[ ! -d "$instance" ]]; then
   find ./ -mindepth 1 -maxdepth 1 > "${instance}/tmp/files-pre"
   # run the executable
   $executable "$@" >"$instance/stdout" 2>"$instance/stderr"
+  echo $? > "$instance/exit_code"
   # get a new list of files in the current directory
   find ./ -mindepth 1 -maxdepth 1 > "${instance}/tmp/files-post"
   # compare new files with old files and get a diff
@@ -37,8 +38,6 @@ if [[ ! -d "$instance" ]]; then
 
   [ -n "$(cat ${instance}/tmp/files-new)" ] && cp -r $(cat ${instance}/tmp/files-new) "${instance}/files"
   rm -r "${instance}/tmp"
-
-  echo $? > "$instance/exit_code"
 fi
 
 cat   "$instance/stdout"
